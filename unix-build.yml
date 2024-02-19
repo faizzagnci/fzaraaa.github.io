@@ -1,0 +1,33 @@
+steps:
+  - script: |
+      conda config --set always_yes yes --set changeps1 no
+      conda update -q conda
+      conda env create --file environment-dev.yml
+    displayName: Install dependencies
+
+  - script: |
+      source activate zarray
+      mkdir build
+      cd build
+      if [[ $(disable_xsimd) == 1 ]]; then
+        CMAKE_EXTRA_ARGS="$CMAKE_EXTRA_ARGS -DXTENSOR_USE_XSIMD=OFF";
+      fi
+      if [[ $(enable_cpp17) == 1 ]]; then
+        CMAKE_EXTRA_ARGS="$CMAKE_EXTRA_ARGS -DCPP17=ON";
+      fi
+      cmake -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX $CMAKE_EXTRA_ARGS -DBUILD_TESTS=ON $(Build.SourcesDirectory)
+    displayName: Configure zarray
+    workingDirectory: $(Build.BinariesDirectory)
+
+  - script: |
+      source activate zarray
+      make -j2 test_zarray_lib
+    displayName: Build zarray
+    workingDirectory: $(Build.BinariesDirectory)/build
+
+  - script: |
+      source activate zarray
+      ./test_zarray_lib
+    displayName: Test zarray
+    workingDirectory: $(Build.BinariesDirectory)/build/test
+
